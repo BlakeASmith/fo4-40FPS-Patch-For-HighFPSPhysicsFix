@@ -27,19 +27,20 @@ HEDR 1.0 and the light flag belong to Next-Gen light plugins. OG `1.10.163` and 
 
 ## 3. Settings
 
-Chosen in the FOMOD (`SelectExactlyOne`): 30, 40 (recommended), 45, 50, 60.
+FOMOD asks for exterior and interior separately (`SelectExactlyOne` each): 30, 40 (recommended), 45, 50, 60. The matching `presets/<exterior>-<interior>/` tree is installed from those flags.
 
 | Key | Value |
 | --- | --- |
-| `InGameFPS`, `PipBoyFPS`, `LockpickingFPS` | chosen cap |
-| `ExteriorFPS`, `InteriorFPS` | `0` (use the global cap) |
+| `ExteriorFPS` | exterior choice |
+| `InteriorFPS` | interior choice |
+| `InGameFPS`, `PipBoyFPS`, `LockpickingFPS` | the lower of the two |
 | `EnableVSync` | `false` |
 | `AllowTearing` | `true` |
 | `Fullscreen` / `Borderless` | `false` / `true` |
 | `FramerateLimitMode` | `0` |
 | `OutOfFocusFPS` | `30` |
 | `UntieSpeedFromFPS`, `DisableiFPSClamp` | `true` |
-| plugin ini `fMaxTime` | `1/fps + 0.0005` |
+| plugin ini `fMaxTime` | `1/min(exterior, interior) + 0.0005` |
 | plugin ini `iFPSClamp`, `iPresentInterval` | `0` |
 
 Papyrus `DynamicUpdateBudget` is left alone. That option cuts script time when the frame rate is above 60. At 40 it would not change the budget.
