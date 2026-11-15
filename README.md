@@ -16,6 +16,10 @@ In `Data/F4SE/Plugins/HighFPSPhysicsFix_custom.ini` (and the same bytes as `High
 
 `Data/SteamDeck_40FPS.ini` (loaded because the empty esp is active) sets `iFPSClamp=0`, `iPresentInterval=0`, borderless window, and `fMaxTime` just above `1/fps`.
 
+## Download
+
+Every push to `main` publishes a GitHub Release. Download the zip on the latest release. The tag is `v<version>-<commit>`.
+
 ## Install
 
 Requires F4SE and High FPS Physics Fix for the same game build (OG 1.10.163, NG 1.10.980–1.10.984, AE 1.11, or the copy bundled with Fallout London).

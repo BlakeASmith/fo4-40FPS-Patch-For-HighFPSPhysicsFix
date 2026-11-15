@@ -18,7 +18,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 STAGING = ROOT / "dist" / "staging"
-ZIP_NAME = "SteamDeck_40FPS_Preset-v1.1.0.zip"
+VERSION = "1.1.0"
+ZIP_NAME = f"SteamDeck_40FPS_Preset-v{VERSION}.zip"
 
 PLUGIN = "SteamDeck_40FPS.esp"
 AUTHOR = "SteamDeck 40FPS Preset"

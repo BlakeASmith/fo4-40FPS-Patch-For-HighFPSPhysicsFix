@@ -50,3 +50,5 @@ The cap is read when the game starts. An MCM cannot change it: High FPS Physics 
 ## 4. Rebuild
 
 `python3 build_mod.py` writes `dist/staging/` and the zip. `pytest` checks the header, the caps, and the archive layout.
+
+`.github/workflows/release.yml` runs that build on every push to `main` and publishes the zip as a GitHub Release tagged `v<version>-<short sha>`. `VERSION` in `build_mod.py` is the version in the filename.
