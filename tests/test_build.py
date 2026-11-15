@@ -17,17 +17,19 @@ def test_esp_header_is_plain_og_compatible():
 
 
 def test_presets_match_cap_and_havok_step():
-    for fps in build_mod.PRESETS:
-        text = build_mod.custom_ini(fps)
-        assert f"InGameFPS={fps}.0" in text
-        assert f"PipBoyFPS={fps}.0" in text
-        assert f"LockpickingFPS={fps}.0" in text
-        assert "EnableVSync=false" in text
-        assert "AllowTearing=true" in text
-        assert "Fullscreen=false" in text
-        assert "Borderless=true" in text
-        assert "FramerateLimitMode=0" in text
-        assert f"fMaxTime={build_mod.fmax_time(fps)}" in build_mod.plugin_ini(fps)
+    text = build_mod.custom_ini(40, 60)
+    assert "ExteriorFPS=40.0" in text
+    assert "InteriorFPS=60.0" in text
+    assert "InGameFPS=40.0" in text
+    assert "PipBoyFPS=40.0" in text
+    assert "LockpickingFPS=40.0" in text
+    assert "EnableVSync=false" in text
+    assert "AllowTearing=true" in text
+    assert "Fullscreen=false" in text
+    assert "Borderless=true" in text
+    assert "FramerateLimitMode=0" in text
+    assert f"fMaxTime={build_mod.fmax_time(40)}" in build_mod.plugin_ini(40, 60)
+    assert f"fMaxTime={build_mod.fmax_time(30)}" in build_mod.plugin_ini(50, 30)
 
 
 def test_fmax_time_is_just_over_one_frame():
@@ -44,16 +46,22 @@ def test_archive_lays_out_fomod_and_both_ini_names(tmp_path):
         names = set(zf.namelist())
     assert "fomod/ModuleConfig.xml" in names
     assert "SteamDeck_40FPS.esp" in names
-    for fps in build_mod.PRESETS:
-        for ini_name in build_mod.CUSTOM_INI_NAMES:
-            assert f"presets/{fps}/F4SE/Plugins/{ini_name}" in names
-        assert f"presets/{fps}/SteamDeck_40FPS.ini" in names
+    assert len(build_mod.PRESETS) ** 2 == 25
+    for exterior in build_mod.PRESETS:
+        for interior in build_mod.PRESETS:
+            key = build_mod.preset_key(exterior, interior)
+            for ini_name in build_mod.CUSTOM_INI_NAMES:
+                assert f"presets/{key}/F4SE/Plugins/{ini_name}" in names
+            assert f"presets/{key}/SteamDeck_40FPS.ini" in names
     with zipfile.ZipFile(archive) as zf:
-        low = zf.read("presets/40/F4SE/Plugins/HighFPSPhysicsFix_custom.ini")
-        high = zf.read("presets/40/F4SE/Plugins/HighFPSPhysicsFix_Custom.ini")
+        low = zf.read("presets/40-60/F4SE/Plugins/HighFPSPhysicsFix_custom.ini")
+        high = zf.read("presets/40-60/F4SE/Plugins/HighFPSPhysicsFix_Custom.ini")
     assert low == high
-    assert b"InGameFPS=40.0" in low
+    assert b"ExteriorFPS=40.0" in low
+    assert b"InteriorFPS=60.0" in low
     config = (staging / "fomod" / "ModuleConfig.xml").read_text(encoding="utf-8")
-    assert 'type name="Recommended"' in config
-    assert config.count('type name="Recommended"') == 1
-    assert "presets/40" in config
+    assert config.count('type name="Recommended"') == 2
+    assert 'name="Exterior FPS"' in config
+    assert 'name="Interior FPS"' in config
+    assert 'flag name="exterior">40</flag>' in config
+    assert "presets/40-60" in config
