@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Test and build the archive
+        run: |
+          python3 -m pip install pytest
+          python3 -m pytest -q
+          python3 build_mod.py
+
+      - name: Publish the zip on the latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(python3 -c "import build_mod; print(build_mod.VERSION)")
+          sha=$(git rev-parse --short HEAD)
+          tag="v${version}-${sha}"
+          asset="dist/SteamDeck_40FPS_Preset-v${version}.zip"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists"
+            exit 0
+          fi
+          cat > release-notes.md <<EOF
+          Download \`${asset#dist/}\`.
+
+          Install it after High FPS Physics Fix. Pick an exterior cap and an interior cap. Both default to 40. Restart the game after changing either one.
+
+          Commit: ${sha}
+          EOF
+          sed -i 's/^[[:space:]]*//' release-notes.md
+          gh release create "$tag" "$asset" \
+            --latest \
+            --title "Steam Deck FPS Preset v${version} (${sha})" \
+            --notes-file release-notes.md

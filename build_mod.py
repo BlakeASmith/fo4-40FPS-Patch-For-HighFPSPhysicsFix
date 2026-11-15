@@ -18,7 +18,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 STAGING = ROOT / "dist" / "staging"
-ZIP_NAME = "SteamDeck_40FPS_Preset-v1.0.0.zip"
+VERSION = "1.1.0"
+ZIP_NAME = f"SteamDeck_40FPS_Preset-v{VERSION}.zip"
 
 PLUGIN = "SteamDeck_40FPS.esp"
 AUTHOR = "SteamDeck 40FPS Preset"
@@ -46,7 +47,14 @@ def fmax_time(fps: int) -> str:
     return f"{(1.0 / fps) + 0.0005:.6f}"
 
 
-def custom_ini(fps: int) -> str:
+def preset_key(exterior: int, interior: int) -> str:
+    return f"{exterior}-{interior}"
+
+
+def custom_ini(exterior: int, interior: int) -> str:
+    # Menus, Pip-Boy, and lockpicking follow the lower cap so they never
+    # jump past the slower of the two areas.
+    shared = min(exterior, interior)
     return f"""\
 ; Steam Deck FPS preset for High FPS Physics Fix
 ; Overrides only the keys below. Loaded at game start. Restart to apply edits.
@@ -55,6 +63,7 @@ def custom_ini(fps: int) -> str:
 ; VSync is off so this limiter owns the cap. Fallout 4 fights the Steam Deck
 ; framerate limiter; a cap inside the physics fix does not.
 ; Borderless + tearing is what Deck VRR / Gamescope can pace.
+; Exterior and interior are independent. 0 on either key would fall back to InGameFPS.
 
 [Main]
 UntieSpeedFromFPS=true
@@ -64,11 +73,11 @@ AllowTearing=true
 DisableVSyncWhileLoading=true
 
 [Limiter]
-InGameFPS={fps}.0
-ExteriorFPS=0.0
-InteriorFPS=0.0
-PipBoyFPS={fps}.0
-LockpickingFPS={fps}.0
+InGameFPS={shared}.0
+ExteriorFPS={exterior}.0
+InteriorFPS={interior}.0
+PipBoyFPS={shared}.0
+LockpickingFPS={shared}.0
 OutOfFocusFPS=30.0
 FramerateLimitMode=0
 
@@ -78,11 +87,13 @@ Borderless=true
 """
 
 
-def plugin_ini(fps: int) -> str:
+def plugin_ini(exterior: int, interior: int) -> str:
+    fps = min(exterior, interior)
     return f"""\
 ; Loaded by Fallout 4 while {PLUGIN} is active.
 ; fMaxTime is the longest frame Havok will simulate before slowing the game.
-; Matched to the {fps} FPS cap. High FPS Physics Fix unties speed as well.
+; Matched to the lower of the exterior ({exterior}) and interior ({interior}) caps.
+; High FPS Physics Fix unties speed as well.
 
 [General]
 iFPSClamp=0
@@ -168,23 +179,46 @@ def parse_esp(data: bytes) -> dict:
     }
 
 
-def module_config() -> str:
-    plugins = []
+def _choice_plugins(flag: str) -> str:
+    blocks = []
     for fps, label in PRESETS.items():
         kind = "Recommended" if fps == DEFAULT_FPS else "Optional"
-        plugins.append(
+        blocks.append(
             f"""\
-      <plugin name="{label}">
-        <description>Cap the game, Pip-Boy, and lockpicking at {fps} FPS. VSync off, borderless, tearing allowed. Applied on the next launch.</description>
-        <files>
-          <folder source="presets/{fps}" destination="" priority="0" />
-        </files>
-        <typeDescriptor>
-          <type name="{kind}" />
-        </typeDescriptor>
-      </plugin>"""
+          <plugin name="{label}">
+            <description>Cap {flag} cells at {fps} FPS. Applied on the next launch.</description>
+            <conditionFlags>
+              <flag name="{flag}">{fps}</flag>
+            </conditionFlags>
+            <typeDescriptor>
+              <type name="{kind}" />
+            </typeDescriptor>
+          </plugin>"""
         )
-    joined = "\n".join(plugins)
+    return "\n".join(blocks)
+
+
+def _conditional_patterns() -> str:
+    patterns = []
+    for exterior in PRESETS:
+        for interior in PRESETS:
+            key = preset_key(exterior, interior)
+            patterns.append(
+                f"""\
+    <pattern>
+      <dependencies operator="And">
+        <flagDependency flag="exterior" value="{exterior}" />
+        <flagDependency flag="interior" value="{interior}" />
+      </dependencies>
+      <files>
+        <folder source="presets/{key}" destination="" priority="0" />
+      </files>
+    </pattern>"""
+            )
+    return "\n".join(patterns)
+
+
+def module_config() -> str:
     return f"""\
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://qconsulting.ca/fo3/ModConfig5.0.xsd">
   <moduleName>Steam Deck FPS Preset</moduleName>
@@ -192,16 +226,30 @@ def module_config() -> str:
     <file source="{PLUGIN}" destination="{PLUGIN}" priority="0" />
   </requiredInstallFiles>
   <installSteps order="Explicit">
-    <installStep name="Framerate">
+    <installStep name="Exterior">
       <optionalFileGroups order="Explicit">
-        <group name="Framerate cap" type="SelectExactlyOne">
+        <group name="Exterior FPS" type="SelectExactlyOne">
           <plugins order="Explicit">
-{joined}
+{_choice_plugins("exterior")}
+          </plugins>
+        </group>
+      </optionalFileGroups>
+    </installStep>
+    <installStep name="Interior">
+      <optionalFileGroups order="Explicit">
+        <group name="Interior FPS" type="SelectExactlyOne">
+          <plugins order="Explicit">
+{_choice_plugins("interior")}
           </plugins>
         </group>
       </optionalFileGroups>
     </installStep>
   </installSteps>
+  <conditionalFileInstalls>
+    <patterns>
+{_conditional_patterns()}
+    </patterns>
+  </conditionalFileInstalls>
 </config>
 """
 
@@ -211,8 +259,8 @@ def info_xml() -> str:
 <fomod>
   <Name>Steam Deck FPS Preset</Name>
   <Author>SteamDeck 40FPS Preset</Author>
-  <Version>1.0.0</Version>
-  <Description>40 FPS (or another chosen cap) overlay for High FPS Physics Fix. Restart to apply.</Description>
+  <Version>1.1.0</Version>
+  <Description>Separate exterior and interior FPS caps for High FPS Physics Fix. 40/40 is the Deck default. Restart to apply.</Description>
   <Website>https://www.nexusmods.com/fallout4/mods/44798</Website>
 </fomod>
 """
@@ -231,14 +279,17 @@ def write_tree(staging: Path = STAGING) -> Path:
     fomod.mkdir()
     (fomod / "ModuleConfig.xml").write_text(module_config(), encoding="utf-8")
     (fomod / "info.xml").write_text(info_xml(), encoding="utf-8")
-    for fps in PRESETS:
-        folder = staging / "presets" / str(fps)
-        plugins = folder / "F4SE" / "Plugins"
-        plugins.mkdir(parents=True)
-        ini = custom_ini(fps)
-        for name in CUSTOM_INI_NAMES:
-            (plugins / name).write_text(ini, encoding="utf-8", newline="\r\n")
-        (folder / "SteamDeck_40FPS.ini").write_text(plugin_ini(fps), encoding="utf-8", newline="\r\n")
+    for exterior in PRESETS:
+        for interior in PRESETS:
+            folder = staging / "presets" / preset_key(exterior, interior)
+            plugins = folder / "F4SE" / "Plugins"
+            plugins.mkdir(parents=True)
+            ini = custom_ini(exterior, interior)
+            for name in CUSTOM_INI_NAMES:
+                (plugins / name).write_text(ini, encoding="utf-8", newline="\r\n")
+            (folder / "SteamDeck_40FPS.ini").write_text(
+                plugin_ini(exterior, interior), encoding="utf-8", newline="\r\n"
+            )
     return staging
 
 

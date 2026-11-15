@@ -2,7 +2,7 @@
 
 A small overlay for **High FPS Physics Fix**. Install it after that mod. It writes `HighFPSPhysicsFix_custom.ini` so the game caps itself at a steady frame rate. **40 FPS** is the default: set the Steam Deck display to 40 Hz and let this limiter pace the game. Fallout 4 stutters and speeds physics up when the Deck's own frame limiter is what holds it at 40.
 
-The installer also offers 30, 45, 50, and 60. The physics fix reads the ini at launch, so changing the number means installing again (or editing the ini) and starting the game again.
+The installer asks for an exterior cap and an interior cap. Each one can be 30, 40, 45, 50, or 60. Both default to 40. Pip-Boy, lockpicking, and `fMaxTime` follow the lower of the two. The physics fix reads the ini at launch, so changing either number means installing again (or editing the ini) and starting the game again.
 
 VSync is turned off, borderless window and tearing are turned on, and Pip-Boy and lockpicking use the same cap. `fMaxTime` in `SteamDeck_40FPS.ini` matches that cap. Enable the esp.
 
